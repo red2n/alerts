@@ -91,9 +91,9 @@ String threshold = store.get(hash);
 
 ---
 
-### 3. **Hash-Based Optimization (83% Memory Reduction)**
+### 3. **Hash-Based Optimization (SHA-256 Truncated to 64 bits)**
 
-Our application uses **MD5 hashing** to drastically reduce data size:
+Our application uses **SHA-256 truncated to 64 bits** for memory efficiency and collision safety:
 
 ```
 Traditional Approach:
@@ -102,27 +102,59 @@ Value: {"threshold": 50, "alertTimes": 0} (40 bytes)
 Total: 90 bytes per property
 60K properties = 5.4MB
 
-Our Hash-Based Approach:
-Key: "2ae1fd9eae05bf85" (16 bytes)
-Value: "2ae1fd9eae05bf85:50:0" (23 bytes)
+Our Hash-Based Approach (SHA-256 → 64 bits):
+Key: "85708894ce9feda3" (16 hex chars = 8 bytes)
+Value: "85708894ce9feda3:50:0" (23 bytes)
 Total: 39 bytes per property
 60K properties = 2.34MB
 
 Memory Savings: 56% reduction
 Storage Savings: 83% in state store
+Hash Space: 2^64 = 18.4 quintillion possible values
+```
+
+**Hash Collision Analysis:**
+```
+For 60,000 properties using 64-bit hash:
+- Hash space: 2^64 = 18,446,744,073,709,551,616
+- Collision probability: 0.0000000976% (9.76 × 10^-11)
+- Confidence: 99.99999990% collision-free
+- Birthday bound: ~5 billion items for 50% collision
+- Your scale: 60K items (0.0012% of birthday bound)
+
+Verdict: Collision is less likely than being struck by a meteor
+✅ Safe up to 10 million properties with 99.99% confidence
+```
+
+**Algorithm Details:**
+```java
+// SHA-256 truncated to first 8 bytes (64 bits)
+MessageDigest md = MessageDigest.getInstance("SHA-256");
+byte[] hash = md.digest(compositeKey.getBytes(UTF_8));
+// Convert first 8 bytes to 16 hex characters
+StringBuilder hexString = new StringBuilder();
+for (int i = 0; i < 8; i++) {
+    String hex = Integer.toHexString(0xff & hash[i]);
+    if (hex.length() == 1) hexString.append('0');
+    hexString.append(hex);
+}
+return hexString.toString(); // e.g., "85708894ce9feda3"
 ```
 
 #### Kafka Streams Benefits with Hashing
-- **Compact storage**: 16-byte keys in RocksDB
-- **Efficient partitioning**: Hash-based distribution
-- **Fast lookup**: Direct key access in state store
-- **Memory footprint**: 60K × 39 bytes = ~2.34MB
+- **Compact storage**: 16-char keys in RocksDB (vs 50-char composite keys)
+- **Collision-safe**: 99.99999990% confidence for 60K properties
+- **Efficient partitioning**: Hash-based distribution across Kafka partitions
+- **Fast lookup**: Direct O(1) key access in state store
+- **Memory footprint**: 60K × 39 bytes = ~2.34MB (vs 5.4MB without hashing)
+- **Hardware accelerated**: SHA-256 optimized in modern CPUs
 
 #### Redis Streams Limitations
 - Still requires full hash table in RAM
 - No built-in compression
 - Memory = 60K × (16 + value) bytes all in RAM
 - Must keep everything hot for performance
+- No disk overflow option
 
 ---
 
