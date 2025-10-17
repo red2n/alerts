@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# PID files
+*.pid
+app.pid
 # IDE
 .idea/
 .vscode/
@@ -23,6 +26,7 @@ dist/
 *.zip
 *.tar.gz
 *.rar
+*.pid
 
 # Maven
 *.pom
