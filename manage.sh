@@ -127,7 +127,7 @@ create_topics() {
         echo "Please create these 3 topics manually:"
         echo "  1. eagle-eye.config"
         echo "  2. eagle-eye.alerts"
-        echo "  3. eagle-eye-stream-processor-threshold-store-changelog"
+        echo "  3. eagle-eye-stream-processor-config-store-changelog"
         echo ""
         echo "See README.md for detailed specifications"
         exit 1
@@ -169,10 +169,10 @@ create_topics() {
     print_success "eagle-eye.alerts"
 
     # Topic 3
-    echo "3. eagle-eye-stream-processor-threshold-store-changelog..."
+    echo "3. eagle-eye-stream-processor-config-store-changelog..."
     kafka-topics --create \
       --bootstrap-server "$BROKER" \
-      --topic eagle-eye-stream-processor-threshold-store-changelog \
+      --topic eagle-eye-stream-processor-config-store-changelog \
       --partitions $PARTITIONS \
       --replication-factor $REPLICATION \
       --config retention.ms=$RETENTION_MS \
@@ -181,7 +181,7 @@ create_topics() {
       --config min.compaction.lag.ms=0 \
       --config segment.ms=100 \
       --if-not-exists 2>&1 | grep -v "already exists" || true
-    print_success "eagle-eye-stream-processor-threshold-store-changelog"
+    print_success "eagle-eye-stream-processor-config-store-changelog"
 
     echo ""
     print_success "All topics created successfully!"

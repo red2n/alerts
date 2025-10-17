@@ -106,7 +106,7 @@ public class AlertProcessingService {
                 ReadOnlyKeyValueStore<String, String> thresholdStore =
                     streamsBuilderFactoryBean.getKafkaStreams()
                         .store(org.apache.kafka.streams.StoreQueryParameters.fromNameAndType(
-                            "threshold-store",
+                            "config-store",
                             QueryableStoreTypes.keyValueStore()
                         ));
                 value = thresholdStore.get(hash);

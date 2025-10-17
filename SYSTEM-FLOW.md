@@ -39,12 +39,12 @@ sequenceDiagram
     rect rgb(240, 255, 240)
         Note over User,AlertTopic: PHASE 2: Alert Request Processing
         User->>API: POST /api/alert
-        Note right of User: {key: "property_42;tenant_0;type_error;interface_api",<br/>errorCount: 85}
+        Note right of User: key: property_42 tenant_0 type_error interface_api<br/>errorCount: 85
 
         API->>Controller: Receive request
         Controller->>Controller: Parse JSON request
         Controller->>Controller: Generate MD5 hash from composite key
-        Note right of Controller: hash = "a1b2c3d4e5f6g7h8"
+        Note right of Controller: hash = a1b2c3d4e5f6g7h8
 
         Controller->>APS: processAlert(hash, errorCount)
 
@@ -67,7 +67,7 @@ sequenceDiagram
         Note right of Thread: Async non-blocking
 
         Thread->>Producer: send(alerts, hash, alertMessage)
-        Note right of Producer: Message: "ALERT: Hash a1b2c3d4e5f6g7h8<br/>exceeded threshold!<br/>ErrorCount=85, Threshold=65, AlertTimes=1"
+        Note right of Producer: ALERT: Hash a1b2c3d4e5f6g7h8<br/>exceeded threshold<br/>ErrorCount=85 Threshold=65 AlertTimes=1
 
         Producer->>AlertTopic: Publish alert message
 
@@ -76,15 +76,9 @@ sequenceDiagram
         and Sync Response
             APS-->>Controller: AlertResult(threshold_breached, 65, 1)
             Controller->>Controller: Build JSON response
-            Controller-->>API: {status: "alert_triggered",<br/>errorCount: 85,<br/>threshold: 65,<br/>alertTimes: 1}
+            Controller-->>API: status: alert_triggered<br/>errorCount: 85<br/>threshold: 65<br/>alertTimes: 1
             API-->>User: HTTP 200 OK
         end
-    end
-
-    rect rgb(255, 248, 240)
-        Note over User,AlertTopic: PHASE 3: Alert Verification
-        User->>AlertTopic: kcat consume from eagle-eye.alerts
-        AlertTopic-->>User: "ALERT: Hash a1b2c3d4e5f6g7h8 exceeded threshold!..."
     end
 ```
 
@@ -101,12 +95,8 @@ sequenceDiagram
 - Checks Bloom filter for fast negative lookup
 - Retrieves threshold from Kafka state store
 - Compares errorCount vs threshold
-- If breached: publishes alert asynchronously
+- If breached: publishes alert asynchronously to `eagle-eye.alerts`
 - Returns response immediately to client
-
-**Phase 3 - Verification (Anytime):**
-- Verify alerts in Kafka topic
-- Check message content and count
 
 ---
 
@@ -141,9 +131,9 @@ sequenceDiagram
 
     Note over KS: Kafka Streams starts processing
     KS->>KTopic: Subscribe to eagle-eye.config
-    KS->>KS: Build state store (threshold-store)
+    KS->>KS: Build state store (config-store)
     KTopic-->>KS: Stream threshold messages
-    KS->>KS: Populate threshold-store with key-value pairs
+    KS->>KS: Populate config-store with key-value pairs
 ```
 
 ---
@@ -267,25 +257,25 @@ sequenceDiagram
 
     rect rgb(220, 250, 200)
         Note over User,Topics: Phase 2: Alert Processing
-        User->>API: POST /api/alert<br/>{property_42, errorCount=85}
+        User->>API: POST /api/alert (property_42, errorCount=85)
         API->>App: Process alert request
         App->>App: Check Bloom filter
         App->>App: Get threshold from state store
-        App->>App: Compare: 85 > threshold?
+        App->>App: Compare 85 vs threshold
 
-        alt Alert Triggered (85 > threshold)
+        alt Alert Triggered
             App->>Kafka: Async send to eagle-eye.alerts
             App->>Topics: Store alert message
-            API-->>User: {"status":"alert_triggered", "errorCount":85, "threshold":60}
+            API-->>User: status: alert_triggered, errorCount:85, threshold:60
         else Below Threshold
-            API-->>User: {"status":"below_threshold", "errorCount":85, "threshold":100}
+            API-->>User: status: below_threshold, errorCount:85, threshold:100
         end
     end
 
     rect rgb(250, 220, 200)
         Note over User,Topics: Phase 3: Verification
-        User->>Kafka: kcat - read eagle-eye.alerts
-        Kafka-->>User: ALERT: Hash xxx exceeded threshold!
+        User->>Kafka: kcat read from eagle-eye.alerts
+        Kafka-->>User: ALERT messages
     end
 ```
 
@@ -322,7 +312,7 @@ sequenceDiagram
 ### 5. **Kafka Topics**
 - **eagle-eye.config**: Stores threshold configurations
 - **eagle-eye.alerts**: Stores triggered alerts
-- **eagle-eye-stream-processor-threshold-store-changelog**: Kafka Streams state store changelog
+- **eagle-eye-stream-processor-config-store-changelog**: Kafka Streams state store changelog
 
 ---
 

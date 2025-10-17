@@ -110,7 +110,7 @@ graph TD✅ Synchronous response to API caller
 
 
 
-    E -->|Load into<br/>State Store| F["State Store<br/>threshold-store<br/>KeyValueStore<br/>Key: hash<br/>Value: hash:threshold:alertTimes"]## Key Features
+    E -->|Load into<br/>State Store| F["State Store<br/>config-store<br/>KeyValueStore<br/>Key: hash<br/>Value: hash:threshold:alertTimes"]## Key Features
 
 
 
@@ -214,7 +214,7 @@ The application will read from `.env` at startup.
 
     LOADER->>KAFKA: Publish to eagle-eye.config
 
-    KAFKA->>STREAM: Load into threshold-store```bash
+    KAFKA->>STREAM: Load into config-store```bash
 
     STREAM->>STATE: Initialize state store with hash-indexed datamvn clean package
 
@@ -440,7 +440,7 @@ Benefits over previous 3-topic approach:{
 
 ### Production Ready2. **eagle-eye.alerts** (output)
 
-3. **eagle-eye-stream-processor-threshold-store-changelog** (internal changelog)
+3. **eagle-eye-stream-processor-config-store-changelog** (internal changelog)
 
 - Cloud Kafka compatible
 
@@ -523,7 +523,7 @@ Expected output:
 ```
   topic "eagle-eye.config" with 1 partitions:
   topic "eagle-eye.alerts" with 1 partitions:
-  topic "eagle-eye-stream-processor-threshold-store-changelog" with 1 partitions:
+  topic "eagle-eye-stream-processor-config-store-changelog" with 1 partitions:
 ```
 
 ### 3. Configure Application
@@ -611,7 +611,7 @@ All topics must be created **manually** in environments without auto-topic-creat
 |-------|------|---------|-----------|-------------|
 | `eagle-eye.config` | Input | Threshold configurations | hash (16 chars) | hash:threshold:alertTimes |
 | `eagle-eye.alerts` | Output | Triggered alerts | hash (16 chars) | compositeKey;hash;errorCount;threshold;alertTimes |
-| `eagle-eye-stream-processor-threshold-store-changelog` | Internal | State store backup | hash (16 chars) | hash:threshold:alertTimes |
+| `eagle-eye-stream-processor-config-store-changelog` | Internal | State store backup | hash (16 chars) | hash:threshold:alertTimes |
 
 ### Topic 1: eagle-eye.config
 
@@ -662,7 +662,7 @@ kafka-topics --create \
 - Faster topic reads (smaller keys = better performance)
 - Consistent with eagle-eye.config topic format
 
-### Topic 3: eagle-eye-stream-processor-threshold-store-changelog
+### Topic 3: eagle-eye-stream-processor-config-store-changelog
 
 **Purpose:** Kafka Streams internal changelog for state store recovery
 
@@ -670,7 +670,7 @@ kafka-topics --create \
 ```bash
 kafka-topics --create \
   --bootstrap-server <YOUR_BROKER> \
-  --topic eagle-eye-stream-processor-threshold-store-changelog \
+  --topic eagle-eye-stream-processor-config-store-changelog \
   --partitions 1 \
   --replication-factor 1 \
   --config retention.ms=2592000000 \
@@ -808,10 +808,10 @@ kafka-acls --add --allow-principal User:alert-app \
   --operation Write --operation Describe \
   --topic eagle-eye.alerts
 
-# eagle-eye-stream-processor-threshold-store-changelog: READ + WRITE
+# eagle-eye-stream-processor-config-store-changelog: READ + WRITE
 kafka-acls --add --allow-principal User:alert-app \
   --operation Read --operation Write --operation Describe \
-  --topic eagle-eye-stream-processor-threshold-store-changelog
+  --topic eagle-eye-stream-processor-config-store-changelog
 
 # Consumer group
 kafka-acls --add --allow-principal User:alert-app \
@@ -1133,7 +1133,7 @@ All 3 topics **MUST** exist before starting:
 
 - [ ] `eagle-eye.config` (Input)
 - [ ] `eagle-eye.alerts` (Output)
-- [ ] `eagle-eye-stream-processor-threshold-store-changelog` (Internal)
+- [ ] `eagle-eye-stream-processor-config-store-changelog` (Internal)
 
 ### Benefits of Manual Topic Creation
 

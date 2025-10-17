@@ -27,12 +27,12 @@ public class AlertStreamProcessor {
     public KStream<String, String> processAlerts(StreamsBuilder builder) {
 
         // Use PERSISTENT state store with changelog for production reliability
-        // Changelog topic: eagle-eye-stream-processor-threshold-store-changelog
+        // Changelog topic: eagle-eye-stream-processor-config-store-changelog
         // This topic must be created manually in all environments (see create-topics.sh)
         // Benefits: Fast recovery (2-3s), state persistence, disk-backed storage
         StoreBuilder<KeyValueStore<String, String>> thresholdStoreBuilder =
             Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore("threshold-store"),
+                Stores.persistentKeyValueStore("config-store"),
                 Serdes.String(),
                 Serdes.String()
             ).withLoggingEnabled(Collections.emptyMap());
@@ -47,11 +47,11 @@ public class AlertStreamProcessor {
             .process(() -> new AbstractProcessor<String, String>() {
                 @Override
                 public void process(String key, String value) {
-                    KeyValueStore<String, String> store = context().getStateStore("threshold-store");
+                    KeyValueStore<String, String> store = context().getStateStore("config-store");
                     store.put(key, value);
                     System.out.println("THRESHOLD LOADED: " + key + " -> " + value);
                 }
-            }, "threshold-store");
+            }, "config-store");
 
         // Return thresholds stream (no dynamic stream processing needed)
         // Alert processing now happens directly in REST API controller
