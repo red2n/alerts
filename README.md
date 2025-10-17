@@ -54,7 +54,7 @@ Monitor 60,000+ properties for error threshold breaches in real-time. When error
 
 3. Processes 500k+ requests per second with sub-millisecond latency│                                                              │
 
-4. Minimizes memory footprint with 83% data reduction through hashing│  STATIC STREAM: eagle-eye.thresholds                        │
+4. Minimizes memory footprint with 83% data reduction through hashing│  STATIC STREAM: eagle-eye.config                        │
 
 │  ├─ Source: MongoDB (loaded hourly)                        │
 
@@ -80,7 +80,7 @@ Monitor 60,000+ properties for error threshold breaches in real-time. When error
 
 - **Kafka:** Cloud Kafka cluster or local installation│                                                              │
 
-- **MongoDB:** For threshold loading (optional - can be replaced)│  OUTPUT STREAM: eagle-eye.eagle.max.alerts                 │
+- **MongoDB:** For threshold loading (optional - can be replaced)│  OUTPUT STREAM: eagle-eye.alerts                 │
 
 - **Tools:** kcat/kafkacat (for Kafka operations)│  ├─ Source: REST API (on threshold breach)                 │
 
@@ -106,7 +106,7 @@ graph TD✅ Synchronous response to API caller
 
 ✅ Lower cost (1 less topic to maintain)
 
-    D["MongoDB Collection<br/>thresholds"] -->|Load Static Stream<br/>from Mongo<br/>Every 1 Hour| E["Kafka Topic<br/>eagle-eye.thresholds<br/>Static Stream"]```
+    D["MongoDB Collection<br/>thresholds"] -->|Load Static Stream<br/>from Mongo<br/>Every 1 Hour| E["Kafka Topic<br/>eagle-eye.config<br/>Static Stream"]```
 
 
 
@@ -128,7 +128,7 @@ graph TD✅ Synchronous response to API caller
 
 - Fast probabilistic lookup: O(1), <1 microsecond
 
-    I -->|Publish Alert| K["Kafka Topic<br/>eagle-eye.eagle.max.alerts<br/>Output Stream"]- False positive rate: 1% (negligible)
+    I -->|Publish Alert| K["Kafka Topic<br/>eagle-eye.alerts<br/>Output Stream"]- False positive rate: 1% (negligible)
 
 - Memory footprint: ~72 KB for 60k properties
 
@@ -212,7 +212,7 @@ The application will read from `.env` at startup.
 
     MONGO->>LOADER: Read 60k thresholds, Generate SHA-256 hashes### 3. Build
 
-    LOADER->>KAFKA: Publish to eagle-eye.thresholds
+    LOADER->>KAFKA: Publish to eagle-eye.config
 
     KAFKA->>STREAM: Load into threshold-store```bash
 
@@ -264,9 +264,9 @@ The application will read from `.env` at startup.
 
             alt Yes - Threshold Breached# Single alert
 
-                SVC->>KAFKA: Publish to eagle-eye.thresholds (update alertTimes)curl -X POST http://localhost:8080/api/alert \
+                SVC->>KAFKA: Publish to eagle-eye.config (update alertTimes)curl -X POST http://localhost:8080/api/alert \
 
-                SVC->>KAFKA: Publish to eagle-eye.eagle.max.alerts (alert)  -H "Content-Type: application/json" \
+                SVC->>KAFKA: Publish to eagle-eye.alerts (alert)  -H "Content-Type: application/json" \
 
                 SVC-->>REST: Return: alert_triggered  -d '{
 
@@ -294,7 +294,7 @@ The application will read from `.env` at startup.
 
 ### 6. Monitor Alerts in Logs
 
-    KAFKA->>CONS: Message on eagle-eye.eagle.max.alerts
+    KAFKA->>CONS: Message on eagle-eye.alerts
 
     CONS->>CONS: Parse messageAlerts appear in application logs:
 
@@ -320,7 +320,7 @@ Threshold: 50
 
 │                                                              │Tenant: tenant_0
 
-│  STATIC STREAM: eagle-eye.thresholds                        │Error Count: 80
+│  STATIC STREAM: eagle-eye.config                        │Error Count: 80
 
 │  ├─ Source: MongoDB (loaded hourly)                        │Threshold: 50
 
@@ -346,7 +346,7 @@ Threshold: 50
 
 │                                                              │{
 
-│  OUTPUT STREAM: eagle-eye.eagle.max.alerts                 │  "key": "property_id;tenant_id;type;interface",
+│  OUTPUT STREAM: eagle-eye.alerts                 │  "key": "property_id;tenant_id;type;interface",
 
 │  ├─ Source: REST API (on threshold breach)                 │  "errorCount": "numeric_value"
 
@@ -390,7 +390,7 @@ Benefits over previous 3-topic approach:{
 
 - **Original message size:** ~120 bytes per property
 
-- **Hash-based format:** ~20 bytes per property### eagle-eye.thresholds (Static Stream - Input)
+- **Hash-based format:** ~20 bytes per property### eagle-eye.config (Static Stream - Input)
 
 - **Annual savings:** 360 MB/year for 60k properties- **Source:** MongoDB (via PeriodicThresholdLoader)
 
@@ -408,7 +408,7 @@ Benefits over previous 3-topic approach:{
 
 - **Memory footprint:** ~72 KB for 60k properties
 
-- **Performance improvement:** 5x faster latency (5ms → <1ms)### eagle-eye.eagle.max.alerts (Output Stream)
+- **Performance improvement:** 5x faster latency (5ms → <1ms)### eagle-eye.alerts (Output Stream)
 
 - **Source:** REST API (on threshold breach)
 
@@ -436,9 +436,9 @@ Benefits over previous 3-topic approach:{
 
 - Persists across application restarts
 
-1. **eagle-eye.thresholds** (input)
+1. **eagle-eye.config** (input)
 
-### Production Ready2. **eagle-eye.eagle.max.alerts** (output)
+### Production Ready2. **eagle-eye.alerts** (output)
 
 3. **eagle-eye-stream-processor-threshold-store-changelog** (internal changelog)
 
@@ -521,8 +521,8 @@ kcat -b your-kafka-broker.example.com:9092 -L | grep eagle-eye
 
 Expected output:
 ```
-  topic "eagle-eye.thresholds" with 1 partitions:
-  topic "eagle-eye.eagle.max.alerts" with 1 partitions:
+  topic "eagle-eye.config" with 1 partitions:
+  topic "eagle-eye.alerts" with 1 partitions:
   topic "eagle-eye-stream-processor-threshold-store-changelog" with 1 partitions:
 ```
 
@@ -609,11 +609,11 @@ All topics must be created **manually** in environments without auto-topic-creat
 
 | Topic | Type | Purpose | Key Format | Value Format |
 |-------|------|---------|-----------|-------------|
-| `eagle-eye.thresholds` | Input | Threshold configurations | hash (16 chars) | hash:threshold:alertTimes |
-| `eagle-eye.eagle.max.alerts` | Output | Triggered alerts | hash (16 chars) | compositeKey;hash;errorCount;threshold;alertTimes |
+| `eagle-eye.config` | Input | Threshold configurations | hash (16 chars) | hash:threshold:alertTimes |
+| `eagle-eye.alerts` | Output | Triggered alerts | hash (16 chars) | compositeKey;hash;errorCount;threshold;alertTimes |
 | `eagle-eye-stream-processor-threshold-store-changelog` | Internal | State store backup | hash (16 chars) | hash:threshold:alertTimes |
 
-### Topic 1: eagle-eye.thresholds
+### Topic 1: eagle-eye.config
 
 **Purpose:** Input topic for threshold configurations
 
@@ -621,7 +621,7 @@ All topics must be created **manually** in environments without auto-topic-creat
 ```bash
 kafka-topics --create \
   --bootstrap-server <YOUR_BROKER> \
-  --topic eagle-eye.thresholds \
+  --topic eagle-eye.config \
   --partitions 1 \
   --replication-factor 1 \
   --config retention.ms=2592000000 \
@@ -635,7 +635,7 @@ kafka-topics --create \
 
 **Retention:** 30 days
 
-### Topic 2: eagle-eye.eagle.max.alerts
+### Topic 2: eagle-eye.alerts
 
 **Purpose:** Output topic for triggered alerts
 
@@ -643,7 +643,7 @@ kafka-topics --create \
 ```bash
 kafka-topics --create \
   --bootstrap-server <YOUR_BROKER> \
-  --topic eagle-eye.eagle.max.alerts \
+  --topic eagle-eye.alerts \
   --partitions 1 \
   --replication-factor 1 \
   --config retention.ms=2592000000 \
@@ -660,7 +660,7 @@ kafka-topics --create \
 **Why hash as key?**
 - 83% storage reduction (hash is 16 chars vs compositeKey is 50+ chars)
 - Faster topic reads (smaller keys = better performance)
-- Consistent with eagle-eye.thresholds topic format
+- Consistent with eagle-eye.config topic format
 
 ### Topic 3: eagle-eye-stream-processor-threshold-store-changelog
 
@@ -798,15 +798,15 @@ The `manage.sh` script provides all operations in one place:
 ### Security: Minimum Required Permissions
 
 ```bash
-# eagle-eye.thresholds: READ + WRITE
+# eagle-eye.config: READ + WRITE
 kafka-acls --add --allow-principal User:alert-app \
   --operation Read --operation Write --operation Describe \
-  --topic eagle-eye.thresholds
+  --topic eagle-eye.config
 
-# eagle-eye.eagle.max.alerts: WRITE only
+# eagle-eye.alerts: WRITE only
 kafka-acls --add --allow-principal User:alert-app \
   --operation Write --operation Describe \
-  --topic eagle-eye.eagle.max.alerts
+  --topic eagle-eye.alerts
 
 # eagle-eye-stream-processor-threshold-store-changelog: READ + WRITE
 kafka-acls --add --allow-principal User:alert-app \
@@ -848,7 +848,7 @@ Submit error count for a property.
 **Response Scenarios:**
 
 1. **Alert Triggered** (errorCount ≥ threshold)
-   - Alert published to `eagle-eye.eagle.max.alerts`
+   - Alert published to `eagle-eye.alerts`
    - `alertTimes` counter incremented
    - Response: `{"status":"received"}`
 
@@ -964,7 +964,7 @@ Average latency: 8ms per request
 1. Wait 5-10 seconds after startup for thresholds to load into state store
 2. Check threshold value:
    ```bash
-   kcat -b <BROKER> -C -t eagle-eye.thresholds | grep <hash>
+   kcat -b <BROKER> -C -t eagle-eye.config | grep <hash>
    ```
 3. Verify errorCount ≥ threshold in your request
 4. Check logs for Bloom Filter initialization:
@@ -992,7 +992,7 @@ Average latency: 8ms per request
 3. Or restart application to force immediate load
 4. Check Kafka topic:
    ```bash
-   kcat -b <BROKER> -C -t eagle-eye.thresholds -f 'Key: %k | Value: %s\n'
+   kcat -b <BROKER> -C -t eagle-eye.config -f 'Key: %k | Value: %s\n'
    ```
 
 ### Issue: Kafka Connection Timeout
@@ -1103,7 +1103,7 @@ Use this checklist before deploying to any environment (Dev/Staging/Production):
 
 - [ ] **Verify alert in output topic**
   ```bash
-  kcat -b <BROKER> -C -t eagle-eye.eagle.max.alerts -f 'Key: %k | Value: %s\n'
+  kcat -b <BROKER> -C -t eagle-eye.alerts -f 'Key: %k | Value: %s\n'
   ```
 
 ### Post-Deployment
@@ -1131,8 +1131,8 @@ Use this checklist before deploying to any environment (Dev/Staging/Production):
 
 All 3 topics **MUST** exist before starting:
 
-- [ ] `eagle-eye.thresholds` (Input)
-- [ ] `eagle-eye.eagle.max.alerts` (Output)
+- [ ] `eagle-eye.config` (Input)
+- [ ] `eagle-eye.alerts` (Output)
 - [ ] `eagle-eye-stream-processor-threshold-store-changelog` (Internal)
 
 ### Benefits of Manual Topic Creation
@@ -1184,8 +1184,8 @@ logging.level.com.alerts=INFO
 ### Why This Design?
 
 ✅ **Eliminated intermediate topic**
-- Original: REST API → eagle-eye.alerts → Processing → eagle-eye.eagle.max.alerts
-- Current: REST API → Direct State Store Lookup → eagle-eye.eagle.max.alerts
+- Original: REST API → eagle-eye.alerts → Processing → eagle-eye.alerts
+- Current: REST API → Direct State Store Lookup → eagle-eye.alerts
 - Result: Lower latency, simpler infrastructure
 
 ✅ **Hash-based keys**

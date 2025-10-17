@@ -32,7 +32,7 @@ public class AlertConsumer {
      *
      * OPTIMIZED: Uses Java Streams for cleaner parsing and pattern matching
      */
-    @KafkaListener(topics = "eagle-eye.eagle.max.alerts", groupId = "alert-group")
+    @KafkaListener(topics = "eagle-eye.alerts", groupId = "alert-group")
     public void listen(String alert) {
         System.out.println("🚨 THRESHOLD ALERT 🚨: " + alert);
 

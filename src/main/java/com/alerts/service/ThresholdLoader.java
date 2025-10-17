@@ -35,7 +35,7 @@ public class ThresholdLoader implements CommandLineRunner {
             long alertTimes = 0;
             String value = String.format("%s:%d:%d", hash, threshold, alertTimes);
 
-            kafkaTemplate.send("eagle-eye.thresholds", hash, value);
+            kafkaTemplate.send("eagle-eye.config", hash, value);
 
             if (i % 25 == 0) {
                 System.out.printf("  Loaded %d/100 (last threshold: %d)%n", i, threshold);

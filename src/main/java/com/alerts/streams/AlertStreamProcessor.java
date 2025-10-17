@@ -39,8 +39,8 @@ public class AlertStreamProcessor {
 
         builder.addStateStore(thresholdStoreBuilder);
 
-        // Load thresholds from eagle-eye.thresholds topic into state store
-        KStream<String, String> thresholds = builder.stream("eagle-eye.thresholds",
+        // Load thresholds from eagle-eye.config topic into state store
+        KStream<String, String> thresholds = builder.stream("eagle-eye.config",
             Consumed.with(Serdes.String(), Serdes.String()));
 
         thresholds

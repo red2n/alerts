@@ -5,7 +5,7 @@ for i in {1..100}; do
   # Random threshold between 40 and 90
   threshold=$((40 + RANDOM % 51))
   value="$key:$threshold:0"
-  echo "$value" | kcat -b lab-stay-backplane.westus.cloudapp.azure.com:9092 -t eagle-eye.thresholds -P -k "$key" 2>/dev/null
+  echo "$value" | kcat -b lab-stay-backplane.westus.cloudapp.azure.com:9092 -t eagle-eye.config -P -k "$key" 2>/dev/null
   if [ $((i % 20)) -eq 0 ]; then
     echo "  Loaded $i/100 (key: $key, threshold: $threshold)..."
   fi

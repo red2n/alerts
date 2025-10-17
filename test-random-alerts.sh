@@ -44,10 +44,10 @@ echo "Alerts Triggered:  $ALERTS_TRIGGERED"
 echo "Below Threshold:   $BELOW_THRESHOLD"
 echo ""
 echo "Checking Kafka topics..."
-THRESHOLD_COUNT=$(kcat -b lab-stay-backplane.westus.cloudapp.azure.com:9092 -t eagle-eye.thresholds -C -e -o beginning 2>/dev/null | wc -l)
-ALERT_COUNT=$(kcat -b lab-stay-backplane.westus.cloudapp.azure.com:9092 -t eagle-eye.eagle.max.alerts -C -e -o beginning 2>/dev/null | wc -l)
+THRESHOLD_COUNT=$(kcat -b lab-stay-backplane.westus.cloudapp.azure.com:9092 -t eagle-eye.config -C -e -o beginning 2>/dev/null | wc -l)
+ALERT_COUNT=$(kcat -b lab-stay-backplane.westus.cloudapp.azure.com:9092 -t eagle-eye.alerts -C -e -o beginning 2>/dev/null | wc -l)
 
-echo "  eagle-eye.thresholds:       $THRESHOLD_COUNT messages"
-echo "  eagle-eye.eagle.max.alerts: $ALERT_COUNT messages"
+echo "  eagle-eye.config:       $THRESHOLD_COUNT messages"
+echo "  eagle-eye.alerts: $ALERT_COUNT messages"
 echo ""
 echo "✅ Test complete!"

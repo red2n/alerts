@@ -125,8 +125,8 @@ create_topics() {
         print_warning "kafka-topics command not found"
         echo ""
         echo "Please create these 3 topics manually:"
-        echo "  1. eagle-eye.thresholds"
-        echo "  2. eagle-eye.eagle.max.alerts"
+        echo "  1. eagle-eye.config"
+        echo "  2. eagle-eye.alerts"
         echo "  3. eagle-eye-stream-processor-threshold-store-changelog"
         echo ""
         echo "See README.md for detailed specifications"
@@ -143,30 +143,30 @@ create_topics() {
     echo ""
 
     # Topic 1
-    echo "1. eagle-eye.thresholds..."
+    echo "1. eagle-eye.config..."
     kafka-topics --create \
       --bootstrap-server "$BROKER" \
-      --topic eagle-eye.thresholds \
+      --topic eagle-eye.config \
       --partitions $PARTITIONS \
       --replication-factor $REPLICATION \
       --config retention.ms=$RETENTION_MS \
       --config cleanup.policy=delete \
       --config compression.type=$COMPRESSION \
       --if-not-exists 2>&1 | grep -v "already exists" || true
-    print_success "eagle-eye.thresholds"
+    print_success "eagle-eye.config"
 
     # Topic 2
-    echo "2. eagle-eye.eagle.max.alerts..."
+    echo "2. eagle-eye.alerts..."
     kafka-topics --create \
       --bootstrap-server "$BROKER" \
-      --topic eagle-eye.eagle.max.alerts \
+      --topic eagle-eye.alerts \
       --partitions $PARTITIONS \
       --replication-factor $REPLICATION \
       --config retention.ms=$RETENTION_MS \
       --config cleanup.policy=delete \
       --config compression.type=$COMPRESSION \
       --if-not-exists 2>&1 | grep -v "already exists" || true
-    print_success "eagle-eye.eagle.max.alerts"
+    print_success "eagle-eye.alerts"
 
     # Topic 3
     echo "3. eagle-eye-stream-processor-threshold-store-changelog..."

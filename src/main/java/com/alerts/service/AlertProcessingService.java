@@ -137,7 +137,7 @@ public class AlertProcessingService {
     }
 
     /**
-     * Publish alert message to eagle-eye.eagle.max.alerts topic
+     * Publish alert message to eagle-eye.alerts topic
      */
     private void publishAlert(String hash, long errorCount, long threshold, long alertTimes) {
         String alertMessage = String.format("ALERT: Hash %s exceeded threshold! ErrorCount=%d, Threshold=%d, AlertTimes=%d",
@@ -149,7 +149,7 @@ public class AlertProcessingService {
         new Thread(() -> {
             try {
                 System.out.println("📤 [" + Thread.currentThread().getName() + "] Calling kafkaTemplate.send()...");
-                var future = kafkaTemplate.send("eagle-eye.eagle.max.alerts", hash, alertMessage);
+                var future = kafkaTemplate.send("eagle-eye.alerts", hash, alertMessage);
                 System.out.println("📤 [" + Thread.currentThread().getName() + "] Send returned, future: " + future);
 
                 // Add timeout to prevent hanging
