@@ -128,11 +128,38 @@ public class AlertProcessingService {
         }
 
         if (errorCount >= data.threshold) {
+            // Increment alert times
+            long newAlertTimes = data.alertTimes + 1;
+
+            // Update state store with new alert count
+            updateAlertTimes(hash, data.threshold, newAlertTimes);
+
             // Publish alert to Kafka topic when threshold is breached
-            publishAlert(hash, errorCount, data.threshold, data.alertTimes);
-            return AlertResult.thresholdBreached(data.threshold, data.alertTimes);
+            publishAlert(hash, errorCount, data.threshold, newAlertTimes);
+            return AlertResult.thresholdBreached(data.threshold, newAlertTimes);
         } else {
             return AlertResult.belowThreshold(errorCount, data.threshold);
+        }
+    }
+
+    /**
+     * Update alert times in state store
+     */
+    private void updateAlertTimes(String hash, long threshold, long newAlertTimes) {
+        String newValue = String.format("%s:%d:%d", hash, threshold, newAlertTimes);
+
+        if (testMode) {
+            // Update in-memory store
+            testThresholdStore.put(hash, newValue);
+            System.out.println("🔄 Updated alertTimes in test store: " + hash + " -> " + newAlertTimes);
+        } else {
+            // Update Kafka topic which will update state store via stream processor
+            try {
+                kafkaTemplate.send("eagle-eye.config", hash, newValue);
+                System.out.println("🔄 Updated alertTimes in Kafka: " + hash + " -> " + newAlertTimes);
+            } catch (Exception e) {
+                System.err.println("❌ Failed to update alertTimes: " + e.getMessage());
+            }
         }
     }
 
